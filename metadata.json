@@ -1,0 +1,8 @@
+{
+  "name": "The Blind Spot",
+  "description": "An AI thinking companion that surfaces assumptions, overlooked factors, and contradictions in your reasoning without ever telling you what to decide.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

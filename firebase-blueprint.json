@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "Decision": {
+      "title": "Decision",
+      "description": "A user's decision dilemma being analyzed for blind spots.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "context": { "type": "string", "maxLength": 5000 },
+        "initialStance": { "type": "string", "maxLength": 1000 },
+        "initialConfidence": { "type": "number" },
+        "statedPriorities": { "type": "array" },
+        "reasons": { "type": "array" },
+        "constraints": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["draft", "exploring", "decided", "revisit"] },
+        "currentRound": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "context", "status", "createdAt", "updatedAt"]
+    },
+    "Analysis": {
+      "title": "Analysis",
+      "description": "An AI-generated reasoning map and blind spot analysis for a decision.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "decisionId": { "type": "string" },
+        "round": { "type": "number" },
+        "claims": { "type": "array" },
+        "hiddenAssumptions": { "type": "array" },
+        "overlookedRisks": { "type": "array" },
+        "probingQuestions": { "type": "array" },
+        "assumptions": { "type": "array" },
+        "risks": { "type": "array" },
+        "questions": { "type": "array" },
+        "contradictions": { "type": "array" },
+        "delta": { "type": "object" },
+        "confidenceBefore": { "type": "number" },
+        "confidenceAfter": { "type": "number" },
+        "visibilityCalibration": { "type": "object" },
+        "guardrail": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["decisionId", "round", "claims", "contradictions", "guardrail", "createdAt"]
+    },
+    "UserRoundResponse": {
+      "title": "UserRoundResponse",
+      "description": "User answers to probing questions and edited reasons between rounds.",
+      "type": "object",
+      "properties": {
+        "decisionId": { "type": "string" },
+        "round": { "type": "number" },
+        "questionAnswers": { "type": "array" },
+        "editedReasons": { "type": "array" },
+        "confidence": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["decisionId", "round", "questionAnswers", "editedReasons", "confidence", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/decisions/{decisionId}": {
+      "schema": { "$ref": "#/entities/Decision" },
+      "description": "User decisions containing dilemma details, priorities, and reasons."
+    },
+    "/users/{userId}/decisions/{decisionId}/analyses/{analysisId}": {
+      "schema": { "$ref": "#/entities/Analysis" },
+      "description": "AI analysis rounds surfacing hidden assumptions, risks, and contradictions."
+    },
+    "/users/{userId}/decisions/{decisionId}/responses/{round}": {
+      "schema": { "$ref": "#/entities/UserRoundResponse" },
+      "description": "User responses to round questions and revised reasons."
+    }
+  }
+}

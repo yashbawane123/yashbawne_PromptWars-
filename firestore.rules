@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidDecision(data) {
+      return data.keys().hasAll(['userId', 'title', 'context', 'status'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.title is string && data.title.size() <= 300
+        && data.context is string && data.context.size() <= 10000
+        && data.status in ['draft', 'exploring', 'decided', 'revisit'];
+    }
+
+    function isValidAnalysis(data) {
+      return data.keys().hasAll(['decisionId', 'round', 'claims', 'contradictions', 'guardrail'])
+        && data.decisionId is string && data.decisionId.size() <= 128
+        && data.round is number
+        && data.claims is list && data.claims.size() <= 100
+        && data.contradictions is list && data.contradictions.size() <= 100
+        && (!('hiddenAssumptions' in data) || (data.hiddenAssumptions is list && data.hiddenAssumptions.size() <= 100))
+        && (!('overlookedRisks' in data) || (data.overlookedRisks is list && data.overlookedRisks.size() <= 100))
+        && (!('probingQuestions' in data) || (data.probingQuestions is list && data.probingQuestions.size() <= 100))
+        && (!('assumptions' in data) || (data.assumptions is list && data.assumptions.size() <= 100))
+        && (!('risks' in data) || (data.risks is list && data.risks.size() <= 100))
+        && (!('questions' in data) || (data.questions is list && data.questions.size() <= 100));
+    }
+
+    // Per-user isolated paths
+    match /users/{userId} {
+      allow read, write: if false;
+
+      match /decisions/{decisionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(decisionId)
+          && isValidDecision(request.resource.data)
+          && request.resource.data.userId == userId;
+        allow update: if isOwner(userId)
+          && isValidId(decisionId)
+          && isValidDecision(request.resource.data)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(decisionId);
+
+        match /analyses/{analysisId} {
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId)
+            && isValidId(analysisId)
+            && isValidAnalysis(request.resource.data);
+          allow update: if isOwner(userId)
+            && isValidId(analysisId)
+            && isValidAnalysis(request.resource.data);
+          allow delete: if isOwner(userId) && isValidId(analysisId);
+        }
+
+        match /responses/{roundId} {
+          allow get, list: if isOwner(userId);
+          allow create, update: if isOwner(userId)
+            && isValidId(roundId)
+            && request.resource.data.decisionId == decisionId;
+          allow delete: if isOwner(userId) && isValidId(roundId);
+        }
+      }
+    }
+  }
+}
